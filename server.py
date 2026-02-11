@@ -47,14 +47,64 @@ def book(competition, club):
 
 @app.route("/purchasePlaces", methods=["POST"])
 def purchasePlaces():
-    competition = [c for c in competitions if c["name"] == request.form["competition"]][
-        0
-    ]
-    club = [c for c in clubs if c["name"] == request.form["club"]][0]
-    placesRequired = int(request.form["places"])
-    competition["numberOfPlaces"] = int(competition["numberOfPlaces"]) - placesRequired
-    flash("Great-booking complete!")
-    return render_template("welcome.html", club=club, competitions=competitions)
+    competition_name = request.form.get("competition", "").strip()
+    club_name = request.form.get("club", "").strip()
+    places_raw = request.form.get("places", "").strip()
+
+    foundClub = next((c for c in clubs if c["name"] == club_name), None)
+    foundCompetition = next(
+        (c for c in competitions if c["name"] == competition_name), None
+    )
+
+    if not foundClub or not foundCompetition:
+        flash("Club ou competition not found.")
+        return redirect(url_for("index"))
+
+    try:
+        placesRequired = int(places_raw)
+    except ValueError:
+        flash("Please enter a valid number of places ")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    if placesRequired <= 0:
+        flash("you must purchase at least 1 place ")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    if placesRequired > 12:
+        flash("You cannot purchase more than 12 places per competition.")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    placesAvailable = int(foundCompetition.get("numberOfPlaces", 0))
+    if placesAvailable <= 0:
+        flash("Sorry, this competition is full.")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    if placesRequired > placesAvailable:
+        flash(f"Only {placesAvailable} places remaining.")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    clubPoints = int(foundClub.get("points", 0))
+    if placesRequired > clubPoints:
+        flash("You do not have enough points to purchase these places.")
+        return render_template(
+            "booking.html", club=foundClub, competition=foundCompetition
+        )
+
+    foundCompetition["numberOfPlaces"] = str(placesAvailable - placesRequired)
+    foundClub["points"] = str(clubPoints - placesRequired)
+
+    flash(f"Great-booking complete! You purchased {placesRequired} place(s).")
+    return render_template("welcome.html", club=foundClub, competitions=competitions)
 
 
 # TODO: Add route for points display
