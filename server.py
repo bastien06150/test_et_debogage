@@ -45,11 +45,15 @@ def book(competition, club):
         return render_template("welcome.html", club=club, competitions=competitions)
 
 
+def clean_name(name):
+    return name.strip()
+
+
 @app.route("/purchasePlaces", methods=["POST"])
 def purchasePlaces():
-    competition_name = request.form.get("competition", "").strip()
-    club_name = request.form.get("club", "").strip()
-    places_raw = request.form.get("places", "").strip()
+    competition_name = clean_name(request.form.get("competition", ""))
+    club_name = clean_name(request.form.get("club", ""))
+    places_raw = clean_name(request.form.get("places", ""))
 
     foundClub = next((c for c in clubs if c["name"] == club_name), None)
     foundCompetition = next(
